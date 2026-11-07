@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "YouTube GIF on Command",
+  "version": "1.0.0",
+  "description": "Create and download short GIF clips from YouTube videos, and insert hosted GIF links into comments.",
+  "permissions": [
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://www.youtube.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.youtube.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "YouTube GIF on Command"
+  }
+}

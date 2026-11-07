@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="ms">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>BEY ARENA 3D</title>
+<style>
+:root{--cyan:#4de8ff;--pink:#ff477e;--gold:#ffd166}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080d1b;color:#fff;font-family:system-ui,Segoe UI,sans-serif;touch-action:none}
+#game{position:fixed;inset:0}canvas{display:block}
+.hud{position:fixed;inset:0;pointer-events:none;padding:14px;display:flex;flex-direction:column;justify-content:space-between}
+.top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.panel{background:#0a1328d9;border:1px solid #ffffff25;border-radius:14px;padding:10px 13px;backdrop-filter:blur(8px);box-shadow:0 8px 30px #0005}
+.brand{font-weight:1000;letter-spacing:2px;color:var(--cyan);font-size:clamp(17px,4vw,26px);text-shadow:0 0 15px #4de8ff66}
+.small{font-size:11px;color:#9fb4d1;letter-spacing:1px}
+.stats{display:flex;gap:8px;text-align:center}.stat b{display:block;font-size:18px}.stat span{font-size:9px;color:#a8bdd8;letter-spacing:1px}
+.bars{display:grid;gap:7px;min-width:min(42vw,210px)}.barline{display:grid;grid-template-columns:35px 1fr;gap:7px;align-items:center;font-size:10px;font-weight:800}
+.track{height:9px;border-radius:10px;background:#26344e;overflow:hidden}.fill{height:100%;width:100%;transition:width .15s}
+#pbar{background:linear-gradient(90deg,#00c8ff,#77f4ff)}#ebar{background:linear-gradient(90deg,#ff3f6c,#ffb05c)}
+.bottom{display:flex;justify-content:space-between;align-items:end;gap:12px}
+.hint{font-size:11px;color:#b8c7dc;max-width:220px;line-height:1.4}
+.controls{display:flex;gap:10px;pointer-events:auto}
+.ctrl{width:70px;height:70px;border-radius:50%;border:2px solid #ffffff55;background:#102748d9;color:white;font-weight:900;font-size:11px;box-shadow:0 5px 20px #0008;touch-action:none}
+.ctrl:active,.ctrl.on{background:#087d9b;border-color:var(--cyan);transform:scale(.96)}
+#launch{background:linear-gradient(145deg,#ff477e,#a21d61);border-color:#ffb3ca;width:82px;height:82px;font-size:12px}
+.overlay{position:fixed;inset:0;display:grid;place-items:center;background:linear-gradient(#050a16a8,#050a16dc);padding:20px}
+.card{width:min(440px,100%);padding:26px;border-radius:22px;text-align:center;background:linear-gradient(150deg,#172746f5,#0a1022f5);border:1px solid #6deaff55;box-shadow:0 20px 80px #000b}
+h1{margin:0 0 5px;font-size:clamp(28px,8vw,44px);letter-spacing:2px;color:var(--cyan);text-shadow:0 0 25px #39c9ff66}
+.card p{color:#b6c7df;font-size:14px;line-height:1.55}
+.primary{border:0;border-radius:14px;padding:15px 26px;font-weight:1000;letter-spacing:1px;background:linear-gradient(90deg,#00c8ff,#5b8dff);color:#061225;font-size:15px}
+#message{font-weight:900;color:var(--gold);min-height:22px;margin:10px}
+@media(max-width:520px){.hud{padding:9px}.panel{padding:8px}.stat b{font-size:15px}.ctrl{width:60px;height:60px}#launch{width:74px;height:74px}.hint{max-width:140px;font-size:10px}}
+</style>
+</head>
+<body>
+<div id="game"></div>
+<div class="hud">
+ <div class="top">
+  <div class="panel"><div class="brand">BEY ARENA <span style="color:#fff">3D</span></div><div class="small">SPIN • STRIKE • SURVIVE</div></div>
+  <div class="panel stats">
+   <div class="stat"><b id="score">0</b><span>SKOR</span></div>
+   <div class="stat"><b id="round">1</b><span>RONDE</span></div>
+   <div class="stat"><b id="time">60</b><span>MASA</span></div>
+  </div>
+  <div class="panel bars">
+   <div class="barline"><span>KAU</span><div class="track"><div id="pbar" class="fill"></div></div></div>
+   <div class="barline"><span>BOT</span><div class="track"><div id="ebar" class="fill"></div></div></div>
+  </div>
+ </div>
+ <div class="bottom">
+  <div class="panel hint">🕹️ Seret joystick untuk bergerak.<br>Tekan <b>STRIKE</b> untuk serangan dash.</div>
+  <div class="controls">
+   <button class="ctrl" id="left">◀<br>GERAK</button>
+   <button class="ctrl" id="right">▶<br>GERAK</button>
+   <button class="ctrl" id="launch">STRIKE<br>⚡</button>
+  </div>
+ </div>
+</div>
+<div class="overlay" id="start">
+ <div class="card"><h1>BEY ARENA</h1><div style="color:#ffcf70;font-weight:800;letter-spacing:3px">3D SPIN BATTLE</div>
+ <p>Lawan bey musuh dalam arena 3D! Tolak lawan keluar gelanggang, elak serangan, dan jadi juara.</p>
+ <p><b>Kawalan:</b> butang kiri/kanan atau kekunci A/D • STRIKE untuk dash.</p>
+ <button class="primary" id="play">MULA BERTARUNG</button></div>
+</div>
+<div class="overlay" id="end" style="display:none">
+ <div class="card"><h1 id="result">MENANG!</h1><p id="resultText">Pertarungan selesai.</p><div id="message"></div><button class="primary" id="again">MAIN LAGI</button></div>
+</div>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+const root=document.querySelector('#game');
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x080d1b);scene.fog=new THREE.Fog(0x080d1b,18,42);
+const camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,.1,100);camera.position.set(0,14,17);camera.lookAt(0,0,0);
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;root.appendChild(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0x9bdcff,0x18203c,2));
+const key=new THREE.DirectionalLight(0xffffff,3);key.position.set(-5,12,8);key.castShadow=true;scene.add(key);
+const arena=new THREE.Group();scene.add(arena);
+const floor=new THREE.Mesh(new THREE.CylinderGeometry(8.4,8.4,.55,96),new THREE.MeshStandardMaterial({color:0x202d4c,metalness:.55,roughness:.4}));floor.position.y=-.35;floor.receiveShadow=true;arena.add(floor);
+const disk=new THREE.Mesh(new THREE.CylinderGeometry(7.95,7.95,.12,96),new THREE.MeshStandardMaterial({color:0x101a32,metalness:.3,roughness:.55}));disk.position.y=-.02;arena.add(disk);
+for(let r of [2.5,5.1,7.5]){const ring=new THREE.Mesh(new THREE.TorusGeometry(r,.035,8,100),new THREE.MeshStandardMaterial({color:r===7.5?0xffb94d:0x3e739c,emissive:r===7.5?0x613000:0x071c35}));ring.rotation.x=Math.PI/2;ring.position.y=.06;arena.add(ring)}
+const wall=new THREE.Mesh(new THREE.TorusGeometry(8.15,.22,12,100),new THREE.MeshStandardMaterial({color:0x405a82,metalness:.7,roughness:.25}));wall.rotation.x=Math.PI/2;wall.position.y=.1;arena.add(wall);
+for(let i=0;i<24;i++){let a=i*Math.PI/12;let post=new THREE.Mesh(new THREE.BoxGeometry(.12,.3,.12),new THREE.MeshStandardMaterial({color:i%2?0x35d9ff:0xff547e,emissive:i%2?0x063c55:0x4c0922}));post.position.set(Math.cos(a)*8.12,.22,Math.sin(a)*8.12);arena.add(post)}
+function makeBey(color,accent){
+ const g=new THREE.Group();const mat=new THREE.MeshStandardMaterial({color,metalness:.72,roughness:.23});
+ const top=new THREE.Mesh(new THREE.CylinderGeometry(.5,1.22,.25,8),mat);top.position.y=.25;top.castShadow=true;g.add(top);
+ const ring=new THREE.Mesh(new THREE.TorusGeometry(.88,.14,10,8),new THREE.MeshStandardMaterial({color:accent,metalness:.8,roughness:.2,emissive:accent,emissiveIntensity:.18}));ring.rotation.x=Math.PI/2;ring.position.y=.34;g.add(ring);
+ const cap=new THREE.Mesh(new THREE.SphereGeometry(.42,24,16),new THREE.MeshStandardMaterial({color:accent,metalness:.6,roughness:.18}));cap.scale.y=.35;cap.position.y=.48;g.add(cap);
+ const tip=new THREE.Mesh(new THREE.ConeGeometry(.2,.42,8),new THREE.MeshStandardMaterial({color:0xdceaff,metalness:.5}));tip.rotation.x=Math.PI;tip.position.y=-.08;g.add(tip);
+ for(let i=0;i<4;i++){let fin=new THREE.Mesh(new THREE.BoxGeometry(.18,.12,.72),new THREE.MeshStandardMaterial({color:accent,metalness:.6}));fin.position.y=.25;fin.rotation.y=i*Math.PI/2;g.add(fin)}
+ return g;
+}
+const player=makeBey(0x087cff,0x63edff),enemy=makeBey(0xb80d43,0xffb24a);scene.add(player,enemy);
+player.position.set(-3,.3,1);enemy.position.set(3,.3,-1);
+const shadowMat=new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.3});
+function shadow(){let m=new THREE.Mesh(new THREE.CircleGeometry(1.1,32),shadowMat);m.rotation.x=-Math.PI/2;m.position.y=.04;scene.add(m);return m}
+const ps=shadow(),es=shadow();
+let running=false,score=0,round=1,time=60,pHP=100,eHP=100,pSpin=1,eSpin=1,px=-3,pz=1,ex=3,ez=-1,pvx=0,pvz=0,evx=0,evz=0,attack=0,keys={};
+const $=id=>document.getElementById(id);
+function updateHud(){$('score').textContent=score;$('round').textContent=round;$('time').textContent=Math.ceil(time);$('pbar').style.width=pHP+'%';$('ebar').style.width=eHP+'%'}
+function reset(){score=0;time=60;pHP=eHP=100;pSpin=eSpin=1;px=-3;pz=1;ex=3;ez=-1;pvx=pvz=evx=evz=0;attack=0;player.position.set(px,.3,pz);enemy.position.set(ex,.3,ez);$('start').style.display='none';$('end').style.display='none';running=true;updateHud()}
+function finish(win){running=false;$('end').style.display='grid';$('result').textContent=win?'JUARA!':'KALAH!';$('resultText').textContent=win?'Bey lawan berjaya ditewaskan. Skor: '+score:'Bey kau kehabisan tenaga. Skor: '+score}
+$('play').onclick=reset;$('again').onclick=reset;
+$('left').onpointerdown=()=>keys.left=true;$('left').onpointerup=$('left').onpointerleave=()=>keys.left=false;
+$('right').onpointerdown=()=>keys.right=true;$('right').onpointerup=$('right').onpointerleave=()=>keys.right=false;
+$('launch').onpointerdown=()=>{if(running&&attack<=0){attack=.55;pvx+=(ex-px)*.95;pvz+=(ez-pz)*.95}};
+addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.code==='Space'&&running&&attack<=0){attack=.55;pvx+=(ex-px)*.95;pvz+=(ez-pz)*.95}});
+addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+const clock=new THREE.Clock();
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+function animate(){requestAnimationFrame(animate);let dt=Math.min(clock.getDelta(),.035);
+ if(running){
+ time-=dt;if(time<=0){finish(pHP>=eHP);time=0}
+ const dir=(keys.right||keys.d?1:0)-(keys.left||keys.a?1:0);
+ pvx+=dir*dt*7;pvz+=Math.sin(performance.now()*.002)*dt*.15;
+ let dx=ex-px,dz=ez-pz,dist=Math.hypot(dx,dz)||1;
+ evx+=dx/dist*dt*1.6;evz+=dz/dist*dt*1.6;
+ if(dist<1.75){let hit=dt*(attack>0?45:17);eHP-=hit;pHP-=dt*13;evx+=dx/dist*dt*8;evz+=dz/dist*dt*8;pvx-=dx/dist*dt*2;pvz-=dz/dist*dt*2}
+ if(attack>0)attack-=dt;
+ pvx*=Math.pow(.91,dt*60);pvz*=Math.pow(.91,dt*60);evx*=Math.pow(.94,dt*60);evz*=Math.pow(.94,dt*60);
+ px+=pvx*dt*5;pz+=pvz*dt*5;ex+=evx*dt*5;ez+=evz*dt*5;
+ let pr=Math.hypot(px,pz),er=Math.hypot(ex,ez);
+ if(pr>7.35){pHP-=dt*25;px*=7.35/pr;pz*=7.35/pr;pvx-=px*.12;pvz-=pz*.12}
+ if(er>7.35){eHP-=dt*32;ex*=7.35/er;ez*=7.35/er;evx-=ex*.16;evz-=ez*.16;score+=Math.ceil(dt*10)}
+ if(dist<1.4){let overlap=(1.4-dist)/2;px-=dx/dist*overlap;pz-=dz/dist*overlap;ex+=dx/dist*overlap;ez+=dz/dist*overlap}
+ player.position.set(px,.3+Math.sin(performance.now()*.012)*.035,pz);enemy.position.set(ex,.3+Math.sin(performance.now()*.013)*.035,ez);
+ player.rotation.y-=dt*(15+pHP*.08);enemy.rotation.y+=dt*(14+eHP*.08);
+ player.rotation.z=clamp(-pvx*.08,-.25,.25);enemy.rotation.z=clamp(evx*.08,-.25,.25);
+ ps.position.set(px,.04,pz);es.position.set(ex,.04,ez);
+ pHP=clamp(pHP,0,100);eHP=clamp(eHP,0,100);if(eHP<=0){score+=500;finish(true)}if(pHP<=0)finish(false);
+ updateHud();
+ }
+ renderer.render(scene,camera);
+}
+animate();
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+</script>
+</body></html>
